@@ -28,6 +28,9 @@
  * 2018-11-22     Jesven       list_thread add smp support
  * 2018-12-27     Jesven       Fix the problem that disable interrupt too long in list_thread
  *                             Provide protection for the "first layer of objects" when list_*
+ * 2023-06-09     Lizhou       partial add below chage
+ *                                  2020-04-07     chenhui      add clear
+ *                                  2022-07-02     Stanley Lwin add list command
  */
 
 #include <rthw.h>
@@ -57,6 +60,14 @@ long version(void)
 }
 FINSH_FUNCTION_EXPORT(version, show RT-Thread version information);
 MSH_CMD_EXPORT(version, show RT-Thread version information);
+
+static long clear(void)
+{
+    rt_kprintf("\x1b[2J\x1b[H");
+
+    return 0;
+}
+MSH_CMD_EXPORT(clear, clear the terminal screen);
 
 rt_inline void object_split(int len)
 {
@@ -246,8 +257,6 @@ long list_thread(void)
 
     return 0;
 }
-FINSH_FUNCTION_EXPORT(list_thread, list thread);
-MSH_CMD_EXPORT(list_thread, list thread);
 
 static void show_wait_queue(struct rt_list_node *list)
 {
@@ -327,8 +336,6 @@ long list_sem(void)
 
     return 0;
 }
-FINSH_FUNCTION_EXPORT(list_sem, list semaphore in system);
-MSH_CMD_EXPORT(list_sem, list semaphore in system);
 #endif
 
 #ifdef RT_USING_EVENT
@@ -392,8 +399,6 @@ long list_event(void)
 
     return 0;
 }
-FINSH_FUNCTION_EXPORT(list_event, list event in system);
-MSH_CMD_EXPORT(list_event, list event in system);
 #endif
 
 #ifdef RT_USING_MUTEX
@@ -450,8 +455,6 @@ long list_mutex(void)
 
     return 0;
 }
-FINSH_FUNCTION_EXPORT(list_mutex, list mutex in system);
-MSH_CMD_EXPORT(list_mutex, list mutex in system);
 #endif
 
 #ifdef RT_USING_MAILBOX
@@ -521,8 +524,6 @@ long list_mailbox(void)
 
     return 0;
 }
-FINSH_FUNCTION_EXPORT(list_mailbox, list mail box in system);
-MSH_CMD_EXPORT(list_mailbox, list mail box in system);
 #endif
 
 #ifdef RT_USING_MESSAGEQUEUE
@@ -588,8 +589,6 @@ long list_msgqueue(void)
 
     return 0;
 }
-FINSH_FUNCTION_EXPORT(list_msgqueue, list message queue in system);
-MSH_CMD_EXPORT(list_msgqueue, list message queue in system);
 #endif
 
 #ifdef RT_USING_MEMHEAP
@@ -645,8 +644,6 @@ long list_memheap(void)
 
     return 0;
 }
-FINSH_FUNCTION_EXPORT(list_memheap, list memory heap in system);
-MSH_CMD_EXPORT(list_memheap, list memory heap in system);
 #endif
 
 #ifdef RT_USING_MEMPOOL
@@ -725,8 +722,6 @@ long list_mempool(void)
 
     return 0;
 }
-FINSH_FUNCTION_EXPORT(list_mempool, list memory pool in system)
-MSH_CMD_EXPORT(list_mempool, list memory pool in system);
 #endif
 
 long list_timer(void)
@@ -784,8 +779,6 @@ long list_timer(void)
 
     return 0;
 }
-FINSH_FUNCTION_EXPORT(list_timer, list timer in system);
-MSH_CMD_EXPORT(list_timer, list timer in system);
 
 #ifdef RT_USING_DEVICE
 static char *const device_type_str[] =
@@ -931,211 +924,117 @@ long list(void)
 }
 FINSH_FUNCTION_EXPORT(list, list all symbol in system)
 
-#ifndef FINSH_USING_MSH_ONLY
-static int str_is_prefix(const char *prefix, const char *str)
+int cmd_list(int argc, char **argv)
 {
-    while ((*prefix) && (*prefix == *str))
+    if(argc == 2)
     {
-        prefix ++;
-        str ++;
-    }
+        if(strcmp(argv[1], "thread") == 0)
+        {
+            list_thread();
+        }
+        else if(strcmp(argv[1], "timer") == 0)
+        {
+            list_timer();
+        }
+#ifdef RT_USING_SEMAPHORE
+        else if(strcmp(argv[1], "sem") == 0)
+        {
+            list_sem();
+        }
+#endif /* RT_USING_SEMAPHORE */
+#ifdef RT_USING_EVENT
+        else if(strcmp(argv[1], "event") == 0)
+        {
+            list_event();
+        }
+#endif /* RT_USING_EVENT */
+#ifdef RT_USING_MUTEX
+        else if(strcmp(argv[1], "mutex") == 0)
+        {
+            list_mutex();
+        }
+#endif /* RT_USING_MUTEX */
+#ifdef RT_USING_MAILBOX
+        else if(strcmp(argv[1], "mailbox") == 0)
+        {
+            list_mailbox();
+        }
+#endif  /* RT_USING_MAILBOX */
+#ifdef RT_USING_MESSAGEQUEUE
+        else if(strcmp(argv[1], "msgqueue") == 0)
+        {
+            list_msgqueue();
+        }
+#endif /* RT_USING_MESSAGEQUEUE */
+#ifdef RT_USING_MEMHEAP
+        else if(strcmp(argv[1], "memheap") == 0)
+        {
+            list_memheap();
+        }
+#endif /* RT_USING_MEMHEAP */
+#ifdef RT_USING_MEMPOOL
+        else if(strcmp(argv[1], "mempool") == 0)
+        {
+            list_mempool();
+        }
+#endif /* RT_USING_MEMPOOL */
+#ifdef RT_USING_DEVICE
+        else if(strcmp(argv[1], "device") == 0)
+        {
+            list_device();
+        }
+#endif /* RT_USING_DEVICE */
+#ifdef RT_USING_DFS
+        else if(strcmp(argv[1], "fd") == 0)
+        {
+            extern int list_fd(void);
+            list_fd();
+        }
+#endif /* RT_USING_DFS */
+        else
+        {
+            goto _usage;
+        }
 
-    if (*prefix == 0)
         return 0;
+    }
 
-    return -1;
+_usage:
+    rt_kprintf("Usage: list [options]\n");
+    rt_kprintf("[options]:\n");
+    rt_kprintf("    %-12s - list threads\n", "thread");
+    rt_kprintf("    %-12s - list timers\n", "timer");
+#ifdef RT_USING_SEMAPHORE
+    rt_kprintf("    %-12s - list semaphores\n", "sem");
+#endif /* RT_USING_SEMAPHORE */
+#ifdef RT_USING_MUTEX
+    rt_kprintf("    %-12s - list mutexs\n", "mutex");
+#endif /* RT_USING_MUTEX */
+#ifdef RT_USING_EVENT
+    rt_kprintf("    %-12s - list events\n", "event");
+#endif /* RT_USING_EVENT */
+#ifdef RT_USING_MAILBOX
+    rt_kprintf("    %-12s - list mailboxs\n", "mailbox");
+#endif /* RT_USING_MAILBOX */
+#ifdef RT_USING_MESSAGEQUEUE
+    rt_kprintf("    %-12s - list message queues\n", "msgqueue");
+#endif /* RT_USING_MESSAGEQUEUE */
+#ifdef RT_USING_MEMHEAP
+    rt_kprintf("    %-12s - list memory heaps\n", "memheap");
+#endif /* RT_USING_MEMHEAP */
+#ifdef RT_USING_MEMPOOL
+    rt_kprintf("    %-12s - list memory pools\n", "mempool");
+#endif /* RT_USING_MEMPOOL */
+#ifdef RT_USING_DEVICE
+    rt_kprintf("    %-12s - list devices\n", "device");
+#endif /* RT_USING_DEVICE */
+#ifdef RT_USING_DFS
+    rt_kprintf("    %-12s - list file descriptors\n", "fd");
+#endif /* RT_USING_DFS */
+
+    return 0;
 }
-
-static int str_common(const char *str1, const char *str2)
-{
-    const char *str = str1;
-
-    while ((*str != 0) && (*str2 != 0) && (*str == *str2))
-    {
-        str ++;
-        str2 ++;
-    }
-
-    return (str - str1);
-}
-
-void list_prefix(char *prefix)
-{
-    struct finsh_syscall_item *syscall_item;
-    struct finsh_sysvar_item *sysvar_item;
-    rt_uint16_t func_cnt, var_cnt;
-    int length, min_length;
-    const char *name_ptr;
-
-    func_cnt = 0;
-    var_cnt  = 0;
-    min_length = 0;
-    name_ptr = RT_NULL;
-
-    /* checks in system function call */
-    {
-        struct finsh_syscall *index;
-        for (index = _syscall_table_begin;
-                index < _syscall_table_end;
-                FINSH_NEXT_SYSCALL(index))
-        {
-            /* skip internal command */
-            if (str_is_prefix("__", index->name) == 0) continue;
-
-            if (str_is_prefix(prefix, index->name) == 0)
-            {
-                if (func_cnt == 0)
-                {
-                    rt_kprintf("--function:\n");
-
-                    if (*prefix != 0)
-                    {
-                        /* set name_ptr */
-                        name_ptr = index->name;
-
-                        /* set initial length */
-                        min_length = strlen(name_ptr);
-                    }
-                }
-
-                func_cnt ++;
-
-                if (*prefix != 0)
-                {
-                    length = str_common(name_ptr, index->name);
-                    if (length < min_length)
-                        min_length = length;
-                }
-
-#ifdef FINSH_USING_DESCRIPTION
-                rt_kprintf("%-16s -- %s\n", index->name, index->desc);
-#else
-                rt_kprintf("%s\n", index->name);
-#endif
-            }
-        }
-    }
-
-    /* checks in dynamic system function call */
-    syscall_item = global_syscall_list;
-    while (syscall_item != NULL)
-    {
-        if (str_is_prefix(prefix, syscall_item->syscall.name) == 0)
-        {
-            if (func_cnt == 0)
-            {
-                rt_kprintf("--function:\n");
-                if (*prefix != 0 && name_ptr == NULL)
-                {
-                    /* set name_ptr */
-                    name_ptr = syscall_item->syscall.name;
-
-                    /* set initial length */
-                    min_length = strlen(name_ptr);
-                }
-            }
-
-            func_cnt ++;
-
-            if (*prefix != 0)
-            {
-                length = str_common(name_ptr, syscall_item->syscall.name);
-                if (length < min_length)
-                    min_length = length;
-            }
-
-            rt_kprintf("[l] %s\n", syscall_item->syscall.name);
-        }
-        syscall_item = syscall_item->next;
-    }
-
-    /* checks in system variable */
-    {
-        struct finsh_sysvar *index;
-        for (index = _sysvar_table_begin;
-                index < _sysvar_table_end;
-                FINSH_NEXT_SYSVAR(index))
-        {
-            if (str_is_prefix(prefix, index->name) == 0)
-            {
-                if (var_cnt == 0)
-                {
-                    rt_kprintf("--variable:\n");
-
-                    if (*prefix != 0 && name_ptr == NULL)
-                    {
-                        /* set name_ptr */
-                        name_ptr = index->name;
-
-                        /* set initial length */
-                        min_length = strlen(name_ptr);
-
-                    }
-                }
-
-                var_cnt ++;
-
-                if (*prefix != 0)
-                {
-                    length = str_common(name_ptr, index->name);
-                    if (length < min_length)
-                        min_length = length;
-                }
-
-#ifdef FINSH_USING_DESCRIPTION
-                rt_kprintf("%-16s -- %s\n", index->name, index->desc);
-#else
-                rt_kprintf("%s\n", index->name);
-#endif
-            }
-        }
-    }
-
-    /* checks in dynamic system variable */
-    sysvar_item = global_sysvar_list;
-    while (sysvar_item != NULL)
-    {
-        if (str_is_prefix(prefix, sysvar_item->sysvar.name) == 0)
-        {
-            if (var_cnt == 0)
-            {
-                rt_kprintf("--variable:\n");
-                if (*prefix != 0 && name_ptr == NULL)
-                {
-                    /* set name_ptr */
-                    name_ptr = sysvar_item->sysvar.name;
-
-                    /* set initial length */
-                    min_length = strlen(name_ptr);
-                }
-            }
-
-            var_cnt ++;
-
-            if (*prefix != 0)
-            {
-                length = str_common(name_ptr, sysvar_item->sysvar.name);
-                if (length < min_length)
-                    min_length = length;
-            }
-
-            rt_kprintf("[v] %s\n", sysvar_item->sysvar.name);
-        }
-        sysvar_item = sysvar_item->next;
-    }
-
-    /* only one matched */
-    if (name_ptr != NULL)
-    {
-        rt_strncpy(prefix, name_ptr, min_length);
-    }
-}
-#endif
-
-#if defined(FINSH_USING_SYMTAB) && !defined(FINSH_USING_MSH_ONLY)
-static int dummy = 0;
-FINSH_VAR_EXPORT(dummy, finsh_type_int, dummy variable for finsh)
-#endif
+MSH_CMD_EXPORT_ALIAS(cmd_list, list, list objects);
 
 #endif /* RT_USING_FINSH */
 
